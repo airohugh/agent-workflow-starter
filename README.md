@@ -82,7 +82,7 @@
 cd ~/agent-workflow-starter && ./uninstall.sh
 ```
 
-它会把装之前就存在的文件还原、删掉本仓库装上去的文件、从 `~/.zprofile` 删掉那一行 PATH。备份文件保留，路径会打印出来。合进 `settings.json` 的钩子段需要手动删（或让 Claude Code 删），VS Code 扩展需要手动卸载，卸载脚本最后会提示。
+它会把装之前就存在的文件还原、删掉本仓库装上去的文件、从 `~/.zprofile` 删掉那一行 PATH。备份文件保留，路径会打印出来。合进 `settings.json` 的钩子段需要手动删（或让 Claude Code 删），VS Code 扩展需要手动卸载；用过 `~/bin/codex` 转接脚本的，`rm ~/bin/codex`。卸载脚本最后会提示。
 
 ## 文档
 

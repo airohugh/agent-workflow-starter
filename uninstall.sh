@@ -148,5 +148,8 @@ echo
 echo "未处理的事项："
 echo "1. VS Code 扩展没有卸载。手动卸载：code --uninstall-extension anthropic.claude-code 与 code --uninstall-extension openai.chatgpt（或在扩展面板里点卸载）。"
 echo "2. 之前让 Claude Code 合并进 ~/.claude/settings.json 的 hooks 段需要手动删，或打开 Claude Code 说：把 settings.json 里 unpushed-reminder.sh 和 git-status-after-add.sh 的 hooks 删掉。"
+if [ -e "$HOME/bin/codex" ]; then
+  echo "3. ~/bin/codex 还在：如果它是按 docs/setup-vscode.md 第 3 步放的转接脚本、不再需要，rm ~/bin/codex。"
+fi
 
 [ "$FAILED" -eq 0 ] || exit 1
