@@ -93,6 +93,8 @@ cd ~/agent-workflow-starter && ./uninstall.sh
 - 只在 macOS 上验证过。Windows 见 [docs/windows.md](docs/windows.md)。
 - `install.sh` 只往 `~/.zprofile`（zsh）加 PATH；用别的 shell 要自己加 `~/bin`。
 - 每轮复核都会消耗 ChatGPT 账户的用量，撞到上限时要等几个小时恢复。
+- `git-status-after-add.sh` 是辅助提醒，不是保证：参数中间带引号（如 `git -c user.name="A B" commit`）、用变量写路径（如 `git -C "$DIR" add`）时可能不注入；命令里有多个 `cd` 或用了 `--git-dir`/`--work-tree` 时只提示「定位可能不准」。提交前仍请看一眼 `git status --short`。
+- `uninstall.sh` 假定装上去的文件仍是普通文件；如果你把它们换成了目录等其他类型，请手动处理。
 
 ## 许可
 
