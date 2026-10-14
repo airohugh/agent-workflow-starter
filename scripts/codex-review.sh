@@ -71,7 +71,9 @@ else
 fi
 rc=$?
 
-if grep -qi 'usage limit' "$OUT" 2>/dev/null; then
+# 只看报告最后 30 行：报告里含 codex 读过的文件原文，任何提到 "usage limit" 的文件都会让
+# 扫整份报告误报；真撞上限时提示出现在输出末尾。
+if tail -n 30 "$OUT" 2>/dev/null | grep -qi 'usage limit'; then
   echo "撞到用量上限：报告不完整，退出码可能仍是 0，别只看退出码" >&2
 fi
 

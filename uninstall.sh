@@ -29,6 +29,7 @@ src_for() {
 
 KEPT=""      # 保留下来的备份路径，最后打印
 DONE=""      # 已处理过的目标（同一目标可能在 manifest 里出现多次）
+FAILED=0     # 未能还原的项数
 
 while IFS="$(printf '\t')" read -r target backup || [ -n "${target:-}" ]; do
   [ -n "$target" ] || continue
@@ -43,10 +44,17 @@ $target"
       tmp="$(mktemp "$ZP.tmp.XXXXXX")"
       grep -v "# $MARK" "$ZP" > "$tmp" || true
       if [ "$backup" = "-" ] && [ ! -s "$tmp" ]; then
-        rm -f "$tmp" "$ZP"
-        echo "✅ $ZP 只剩我们那一行，已删除整个文件（原本就是我们创建的）"
+        if [ -L "$ZP" ]; then
+          : > "$ZP"
+          rm -f "$tmp"
+          echo "✅ $ZP 是符号链接，只剩我们那一行：保留链接，已清空它指向的文件"
+        else
+          rm -f "$tmp" "$ZP"
+          echo "✅ $ZP 只剩我们那一行，已删除整个文件（原本就是我们创建的）"
+        fi
       else
-        mv "$tmp" "$ZP"
+        # 写到目标而不是 mv 替换：.zprofile 若是符号链接，链接要保留
+        cat "$tmp" > "$ZP" && rm -f "$tmp"
         echo "✅ 已从 $ZP 删除带标记的 PATH 行"
       fi
     else
@@ -62,7 +70,14 @@ $backup"; fi
     continue
   fi
   if ! grep -q "$MARK" "$target"; then
-    echo "⚠️ $target 里没有 $MARK 标记，不是我们装的（或你已替换），不动"
+    if [ "$backup" != "-" ] && [ -f "$backup" ] && cmp -s "$backup" "$target"; then
+      echo "· $target 已还原过，跳过"
+      KEPT="$KEPT
+$backup"
+    else
+      echo "⚠️ $target 里没有 $MARK 标记，不是我们装的（或你已替换），不动"
+      FAILED=$((FAILED+1))
+    fi
     continue
   fi
 
@@ -83,6 +98,7 @@ $backup"
       echo "✅ 已还原 ${target}（来自 ${backup}）"
     else
       echo "⚠️ 备份 $backup 不见了，$target 保持现状没动"
+      FAILED=$((FAILED+1))
     fi
   else
     rm -f "$target"
@@ -90,8 +106,13 @@ $backup"
   fi
 done < "$MANIFEST"
 
-rm -rf "$STATE_DIR"
-echo "✅ 已删除 $STATE_DIR"
+if [ "$FAILED" -gt 0 ]; then
+  echo
+  echo "有 ${FAILED} 项未能还原，安装记录已保留在 ${STATE_DIR}，处理后可再跑一次 ./uninstall.sh"
+else
+  rm -rf "$STATE_DIR"
+  echo "✅ 已删除 $STATE_DIR"
+fi
 
 KEPT="$(printf '%s\n' "$KEPT" | grep -v '^$' | sort -u || true)"
 if [ -n "$KEPT" ]; then
@@ -104,3 +125,5 @@ echo
 echo "未处理的事项："
 echo "1. VS Code 扩展没有卸载。手动卸载：code --uninstall-extension anthropic.claude-code 与 code --uninstall-extension openai.chatgpt（或在扩展面板里点卸载）。"
 echo "2. 之前让 Claude Code 合并进 ~/.claude/settings.json 的 hooks 段需要手动删，或打开 Claude Code 说：把 settings.json 里 unpushed-reminder.sh 和 git-status-after-add.sh 的 hooks 删掉。"
+
+[ "$FAILED" -eq 0 ] || exit 1

@@ -68,12 +68,22 @@ fi
 
 # --- Claude Code ---
 CLAUDE_OK=0
-if has claude && run claude --version >/dev/null 2>&1; then
+if ! has claude; then
+  if [ -e "$HOME/.local/bin/claude" ]; then
+    bad claude-cli "claude 命令不在 PATH 里（~/.local/bin/claude 已存在，只是不在 PATH 里）" \
+      "curl -fsSL https://claude.ai/install.sh | bash，然后新开终端" \
+      "装过了还找不到：官方安装位置是 ~/.local/bin，把它加进 PATH 后新开终端"
+  else
+    bad claude-cli "claude 命令行不可用（PATH 里没有 claude）" \
+      "curl -fsSL https://claude.ai/install.sh | bash，然后新开终端" \
+      "装过了还找不到：官方安装位置是 ~/.local/bin，把它加进 PATH 后新开终端"
+  fi
+elif ! run claude --version >/dev/null 2>&1; then
+  bad claude-cli "claude 命令存在，但 claude --version 运行失败" \
+    "运行 claude doctor 看诊断"
+else
   CLAUDE_OK=1
   ok claude-cli "claude 命令行可用"
-else
-  bad claude-cli "claude 命令行不可用" \
-    "curl -fsSL https://claude.ai/install.sh | bash，然后新开终端" "还不行就运行 claude doctor 看诊断"
 fi
 if [ "$CLAUDE_OK" = 1 ]; then
   if run claude auth status 2>&1 | grep -Eq '"loggedIn"[[:space:]]*:[[:space:]]*true'; then
@@ -134,11 +144,47 @@ else
   bad hooks-files "钩子脚本缺失或不可执行" "在本目录跑 ./install.sh"
 fi
 SETTINGS="$HOME/.claude/settings.json"
-if [ -f "$SETTINGS" ] && grep -q 'unpushed-reminder.sh' "$SETTINGS" && grep -q 'git-status-after-add.sh' "$SETTINGS"; then
-  ok hooks-settings "settings.json 里已配置两个钩子"
+HOOK_FIX="打开 Claude Code 说「把 agent-workflow-starter 的 hooks/settings-snippet.json 合进 ~/.claude/settings.json」"
+if ! has python3; then
+  bad hooks-settings "无法检查 settings.json 的钩子配置：python3 不可用" "先修 python3"
+elif [ ! -f "$SETTINGS" ]; then
+  bad hooks-settings "~/.claude/settings.json 不存在" "$HOOK_FIX"
 else
-  bad hooks-settings "~/.claude/settings.json 里没有配置这两个钩子" \
-    "打开 Claude Code 说「把 agent-workflow-starter 的 hooks/settings-snippet.json 合进 ~/.claude/settings.json」"
+  hs=$(SETTINGS="$SETTINGS" python3 -c '
+import json, os, sys
+try:
+    with open(os.environ["SETTINGS"]) as f:
+        d = json.load(f)
+except Exception:
+    print("INVALID"); sys.exit(0)
+def has_cmd(event, matcher_ok, needle):
+    h = d.get("hooks") if isinstance(d, dict) else None
+    groups = h.get(event) if isinstance(h, dict) else None
+    if not isinstance(groups, list):
+        return False
+    for g in groups:
+        if not isinstance(g, dict) or not matcher_ok(g.get("matcher", "")):
+            continue
+        for x in g.get("hooks") or []:
+            if isinstance(x, dict) and needle in str(x.get("command", "")):
+                return True
+    return False
+miss = []
+if not has_cmd("SessionStart", lambda m: True, "unpushed-reminder.sh"):
+    miss.append("unpushed-reminder.sh（SessionStart）")
+if not has_cmd("PostToolUse", lambda m: "Bash" in str(m), "git-status-after-add.sh"):
+    miss.append("git-status-after-add.sh（PostToolUse，matcher 为 Bash）")
+print("MISSING " + "、".join(miss) if miss else "OK")
+' 2>/dev/null) || hs="INVALID"
+  case "$hs" in
+    OK)
+      ok hooks-settings "settings.json 里两个钩子的配置结构正确（是否真触发，开一个新会话看）" ;;
+    MISSING*)
+      bad hooks-settings "~/.claude/settings.json 里缺少钩子配置：${hs#MISSING }" "$HOOK_FIX" ;;
+    *)
+      bad hooks-settings "~/.claude/settings.json 不是合法 JSON，没法检查钩子配置" \
+        "打开 Claude Code 说「~/.claude/settings.json 的 JSON 格式有问题，帮我修好（先备份）」，修好后再跑一次 ./check.sh" ;;
+  esac
 fi
 
 # --- 可选 ---

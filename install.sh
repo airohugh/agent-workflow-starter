@@ -15,12 +15,26 @@ touch "$MANIFEST"
 
 record() { printf '%s\t%s\n' "$1" "$2" >> "$MANIFEST"; }
 
+# 备份名：已存在就依次试 -1、-2……，绝不覆盖已有备份（同一秒内两次安装也安全）
+uniq_bak() {
+  local b="$1" n=1
+  if [ -e "$b" ] || [ -L "$b" ]; then
+    while [ -e "$b-$n" ] || [ -L "$b-$n" ]; do n=$((n+1)); done
+    b="$b-$n"
+  fi
+  printf '%s' "$b"
+}
+
 # install_file <仓库内源文件> <目标路径> <exec|plain>
 install_file() {
   local src="$SRC/$1" dst="$2" mode="$3" bak
   if [ ! -f "$src" ]; then
     echo "❌ 缺少源文件：$1（仓库不完整？）" >&2
     exit 1
+  fi
+  if [ -L "$dst" ] && [ ! -e "$dst" ]; then
+    echo "⚠️ $dst 是指向不存在文件的符号链接，跳过，请手动处理"
+    return 0
   fi
   mkdir -p "$(dirname "$dst")"
   if [ ! -e "$dst" ]; then
@@ -30,13 +44,14 @@ install_file() {
   elif cmp -s "$src" "$dst"; then
     echo "· 已是最新：$dst"
   else
-    bak="$dst.bak-$TS"
+    bak="$(uniq_bak "$dst.bak-$TS")"
     cp -p "$dst" "$bak"
     cp "$src" "$dst"
     record "$dst" "$bak"
     echo "✅ 已更新：$dst"
     echo "   你原来的文件在 $bak"
   fi
+  if [ -L "$dst" ]; then echo "   （这是符号链接，实际写入的是它指向的文件）"; fi
   if [ "$mode" = "exec" ]; then chmod +x "$dst"; fi
 }
 
@@ -50,12 +65,14 @@ install_file "hooks/git-status-after-add.sh"    "$HOME/.claude/hooks/git-status-
 echo
 echo "== 2/4 PATH（~/bin） =="
 ZP="$HOME/.zprofile"
-if [ -f "$ZP" ] && grep -q "# $MARK" "$ZP"; then
+if [ -L "$ZP" ] && [ ! -e "$ZP" ]; then
+  echo "⚠️ $ZP 是指向不存在文件的符号链接，跳过，请手动处理"
+elif [ -f "$ZP" ] && grep -q "# $MARK" "$ZP"; then
   echo "· .zprofile 里已有 PATH 行，跳过"
 else
   zbak="-"
   if [ -f "$ZP" ]; then
-    zbak="$ZP.bak-$TS"
+    zbak="$(uniq_bak "$ZP.bak-$TS")"
     cp -p "$ZP" "$zbak"
     # 末尾没换行就先补一个，避免新行接在旧行后面
     if [ -s "$ZP" ] && [ -n "$(tail -c1 "$ZP")" ]; then printf '\n' >> "$ZP"; fi
@@ -63,6 +80,7 @@ else
   printf '%s\n' 'export PATH="$HOME/bin:$PATH"  # agent-workflow-starter' >> "$ZP"
   record "$ZP" "$zbak"
   echo "✅ 已在 $ZP 追加 PATH 行"
+  if [ -L "$ZP" ]; then echo "   （这是符号链接，实际写入的是它指向的文件）"; fi
   if [ "$zbak" != "-" ]; then echo "   你原来的文件在 $zbak"; fi
 fi
 echo "   新开一个终端窗口后生效"

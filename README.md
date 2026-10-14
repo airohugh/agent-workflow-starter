@@ -38,11 +38,11 @@
 | 4 | 登录 | 终端运行 `claude` 按提示登录；运行 `codex login` 选 Sign in with ChatGPT |
 | 5 | 拿到本仓库 | `git clone <本仓库地址> ~/agent-workflow-starter && cd ~/agent-workflow-starter` |
 | 6 | 安装 | `./install.sh` |
-| 7 | 自检 | **新开一个终端**，`cd ~/agent-workflow-starter && ./check.sh`，看到全绿 |
-| 8 | 合并钩子配置 | 在 VS Code 里打开 Claude Code，说一句：「把 ~/agent-workflow-starter/hooks/settings-snippet.json 合进 ~/.claude/settings.json」。合并后再跑一次 `./check.sh` |
+| 7 | 合并钩子配置 | 在 VS Code 里打开 Claude Code，说一句：「把 ~/agent-workflow-starter/hooks/settings-snippet.json 合进 ~/.claude/settings.json」 |
+| 8 | 自检 | **新开一个终端**，`cd ~/agent-workflow-starter && ./check.sh`，看到全绿 |
 | 9 | 第一次真用 | 见下一节 |
 
-每一步卡住都可以先跑 `./check.sh`：每个红项下面都写了修法。各项的详细说明与红项截图见 [docs/setup-vscode.md](docs/setup-vscode.md)。
+拿到本仓库（第 5 步）之后，哪一步卡住都可以先跑 `./check.sh`：每个红项下面都写了修法。各项的详细说明与红项截图见 [docs/setup-vscode.md](docs/setup-vscode.md)。
 
 ## 第一次真用：拿一份自己的分析跑一轮交叉复核
 

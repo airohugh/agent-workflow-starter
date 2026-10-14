@@ -35,7 +35,7 @@ claude --version
 codex --version
 ```
 
-都打印版本号即可。`claude` 找不到时，按官方说明运行 `claude doctor` 看诊断。
+都打印版本号即可。`claude` 提示找不到命令，多半是安装位置 `~/.local/bin` 还不在 PATH 里：先新开终端再试，还不行就把它加进 PATH。命令能找到、但运行出错时，再运行 `claude doctor` 看诊断。
 
 ## 4. 登录
 
@@ -95,7 +95,7 @@ xcode-select --install
 **钩子还没合进设置：**
 
 ```text
-❌ [hooks-settings] ~/.claude/settings.json 里没有配置这两个钩子
+❌ [hooks-settings] ~/.claude/settings.json 不存在
    修法：打开 Claude Code 说「把 agent-workflow-starter 的 hooks/settings-snippet.json 合进 ~/.claude/settings.json」
 ```
 
