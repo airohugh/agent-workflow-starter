@@ -58,6 +58,9 @@ if m0:
     else:
         loose = 1
 other_cd = 1 if re.search(r"(?:^|[^\w./-])cd(?:\s|$)", rest) else 0
+# 一条命令里多段 git add/commit 且用了 -C：可能跨了几个仓，下面只报最后一段所在的仓
+if len(ms) > 1 and any(re.search(r"-C\s", m.group(1)) for m in ms):
+    loose = 1
 opts = ms[-1].group(1)
 try:
     # 按参数边界解析：只有参数位置上的 -C <路径> 才是目录；-c <值> 与 --xxx[=值] 整个跳过，
@@ -104,7 +107,7 @@ staged=$(git diff --cached --name-only | wc -l | tr -d ' ')
 note=""
 if [ "$other_cd" = "1" ]; then note="命令里除了开头的 cd 还有别的 cd（git 之后、括号里或多行），下面的仓库定位可能不准，请自行核对仓库路径。
 "; fi
-if [ "$loose" = "1" ]; then note="${note}命令用了 --git-dir/--work-tree，或路径与选项无法解析，下面的仓库定位可能不准，请自行核对。
+if [ "$loose" = "1" ]; then note="${note}命令用了 --git-dir/--work-tree、多段 git -C（只报最后一段的仓），或路径与选项无法解析，下面的仓库定位可能不准，请自行核对。
 "; fi
 
 printf '%s%s\n%s' "$note" "[git-status-after-add] 仓库 ${repo}，分支 ${branch}，已 staged ${staged} 个文件。git status --short 前 40 行（核对真的 staged 了、没混入无关文件）：" "$status" \

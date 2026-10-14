@@ -53,7 +53,7 @@
    R=$(mktemp -d /tmp/review-XXXXXX) && cp analysis.md 原始材料.pdf "$R"/ && echo "$R"
    ```
 
-   每轮都新建一个，别复用旧目录（旧材料和旧报告会混进来）。`$R` 只在当前终端窗口里有效，下面几步在同一个窗口里做。
+   在项目目录里跑这一行（`cp` 用的是相对路径，复制的是当前目录里的最新版）。每轮都新建一个，别复用旧目录（旧材料和旧报告会混进来）。`$R` 只在当前终端窗口里有效，下面几步在同一个窗口里做。
 
 3. 在 `$R` 目录里写 `prompt.md`，比如：
 
@@ -67,10 +67,12 @@
 4. 跑：
 
    ```bash
-   cd "$R" && codex-review.sh prompt.md report.md
+   (cd "$R" && codex-review.sh prompt.md report.md)
    ```
 
-5. 把 `report.md` **完整**交给 Claude Code，让它逐条判断：哪些是真问题（照改）、哪些是复核方看不到证据（不删内容）、哪些是复核方自己错了（驳回并写理由）。改完再审一轮，直到新的发现不再来自上一轮的修改。
+   外面的括号让终端留在项目目录，下一轮复制时不会从送审目录里拿到旧文件。
+
+5. 把 `"$R"/report.md` **完整**交给 Claude Code，让它逐条判断：哪些是真问题（照改）、哪些是复核方看不到证据（不删内容）、哪些是复核方自己错了（驳回并写理由）。改完回到第 2 步，从项目目录重新复制修改后的文件再审一轮，直到新的发现不再来自上一轮的修改。
 
 完整做法、三个必踩的坑、什么时候停，见 [docs/cross-review.md](docs/cross-review.md)。
 
@@ -95,7 +97,7 @@ cd ~/agent-workflow-starter && ./uninstall.sh
 - 只在 macOS 上验证过。Windows 见 [docs/windows.md](docs/windows.md)。
 - `install.sh` 只往 `~/.zprofile`（zsh）加 PATH；用别的 shell 要自己加 `~/bin`。
 - 每轮复核都会消耗 ChatGPT 账户的用量，撞到上限时要等几个小时恢复。
-- `git-status-after-add.sh` 是辅助提醒，不是保证：参数中间带引号（如 `git -c user.name="A B" commit`）、用变量写路径（如 `git -C "$DIR" add`）时可能不注入；只解析命令开头的 `cd 路径 &&` 和 `git -C 路径`，别处还有 `cd`（git 之后、括号里、多行）或用了 `--git-dir`/`--work-tree` 时只提示「定位可能不准」。提交前仍请看一眼 `git status --short`。
+- `git-status-after-add.sh` 是辅助提醒，不是保证：参数中间带引号（如 `git -c user.name="A B" commit`）、用变量写路径（如 `git -C "$DIR" add`）时可能不注入；只解析命令开头的 `cd 路径 &&` 和 `git -C 路径`，别处还有 `cd`（git 之后、括号里、多行）、一条命令里多段 `git -C` 跨了几个仓（只报最后一段的仓），或用了 `--git-dir`/`--work-tree` 时只提示「定位可能不准」。提交前仍请看一眼 `git status --short`。
 - `uninstall.sh` 假定装上去的文件仍是普通文件；如果你把它们换成了目录等其他类型，请手动处理。
 
 ## 许可
