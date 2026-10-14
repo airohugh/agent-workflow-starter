@@ -31,7 +31,7 @@ loc=$(printf '%s' "$input" | python3 -c '
 import json,os,re,shlex,sys
 d = json.load(sys.stdin)
 cmd = (d.get("tool_input") or {}).get("command") or ""
-arg = r"(?:\"[^\"]*\"|\x27[^\x27]*\x27|[^\s;&|]+)"
+arg = r"(?:\"[^\"]*\"|\x27[^\x27]*\x27|(?:\\.|[^\s;&|\\])+)"
 trig = re.compile(
     r"(?:^|[;&|(`])[ \t]*(?:[^\s;&|]*/)?git((?:\s+(?:-C\s+" + arg + r"|-c\s+" + arg + r"|--[^\s;&|]+))*)\s+(?:add|commit)(?=\s|$)",
     re.M)
@@ -59,7 +59,19 @@ if m0:
         loose = 1
 other_cd = 1 if re.search(r"(?:^|[^\w./-])cd(?:\s|$)", rest) else 0
 # 一条命令里多段 git add/commit 且用了 -C：可能跨了几个仓，下面只报最后一段所在的仓
-if len(ms) > 1 and any(re.search(r"-C\s", m.group(1)) for m in ms):
+def has_C(o):
+    # 只认参数位置上的 -C；-c 的值（如 core.sshCommand=ssh -C …）跳过
+    try:
+        t = shlex.split(o)
+    except ValueError:
+        return "-C" in o
+    i = 0
+    while i < len(t):
+        if t[i] == "-C":
+            return True
+        i += 2 if t[i] == "-c" else 1
+    return False
+if len(ms) > 1 and any(has_C(m.group(1)) for m in ms):
     loose = 1
 opts = ms[-1].group(1)
 try:
