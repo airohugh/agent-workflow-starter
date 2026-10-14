@@ -4,14 +4,14 @@
 # SessionStart 的普通 stdout 会作为上下文进入 Claude，所以这里只输出一行纯文本。
 #
 # 阈值（环境变量可覆盖）：
-#   AWS_UNPUSHED_MAX_COMMITS  未推提交数超过它就提醒，默认 30
-#   AWS_UNPUSHED_MAX_DAYS     最早一个未推提交已满这么多天就提醒，默认 7
+#   STARTER_UNPUSHED_MAX_COMMITS  未推提交数超过它就提醒，默认 30
+#   STARTER_UNPUSHED_MAX_DAYS     最早一个未推提交已满这么多天就提醒，默认 7
 #
 # 只读本地 git、不联网：与远端的比较以上次 fetch 的状态为准，不会为了提醒去连网络。
 # 没有上游分支、不是 git 仓、stdin 不是合法 JSON 等任何异常，一律静默退出 0，绝不阻断会话。
 
-MAX_COMMITS=${AWS_UNPUSHED_MAX_COMMITS:-30}
-MAX_DAYS=${AWS_UNPUSHED_MAX_DAYS:-7}
+MAX_COMMITS=${STARTER_UNPUSHED_MAX_COMMITS:-30}
+MAX_DAYS=${STARTER_UNPUSHED_MAX_DAYS:-7}
 
 # stdin 是 SessionStart 的 JSON（含 session_id、transcript_path、cwd、hook_event_name、source 等）
 CWD=$(python3 -c 'import json, sys

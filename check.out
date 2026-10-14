@@ -1,0 +1,27 @@
+✅ [vscode] VS Code 已安装
+⚠️ [code-cli] code 命令不在 PATH 里（不影响使用，但 install.sh 没法自动装扩展）
+   修法：VS Code 命令面板运行 "Shell Command: Install 'code' command in PATH"，然后重开终端
+❌ [ext-claude] 没装 Claude Code 扩展
+   修法：打开 https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code 点 Install，或 code --install-extension anthropic.claude-code
+❌ [ext-codex] 没装 Codex 扩展
+   修法：打开 https://marketplace.visualstudio.com/items?itemName=openai.chatgpt 点 Install，或 code --install-extension openai.chatgpt
+✅ [git] git 可用
+✅ [python3] python3 可用（钩子要用）
+✅ [claude-cli] claude 命令行可用
+❌ [claude-login] Claude Code 未登录
+   修法：运行 claude（或在 VS Code 的 Claude Code 面板点 Sign in），用 Pro/Max/Team/Enterprise 账号登录；免费账号不行
+❌ [codex-cli] codex 命令行不可用
+   修法：curl -fsSL https://chatgpt.com/codex/install.sh | sh，然后新开终端
+❌ [codex-login] 无法检查登录状态：先修 codex-cli
+   修法：先修上一项 codex-cli
+✅ [rules-claude] ~/.claude/CLAUDE.md 已安装
+✅ [rules-codex] ~/.codex/AGENTS.md 已安装
+✅ [review-script] ~/bin/codex-review.sh 存在且可执行
+❌ [path] 当前终端的 PATH 里找不到 codex-review.sh（~/bin 没生效）
+   修法：新开一个终端窗口；或运行 source ~/.zprofile
+✅ [hooks-files] 两个钩子脚本存在且可执行
+❌ [hooks-settings] ~/.claude/settings.json 不存在
+   修法：打开 Claude Code 说「把 agent-workflow-starter 的 hooks/settings-snippet.json 合进 ~/.claude/settings.json」
+✅ [timeout] timeout/gtimeout 可用
+
+9 项通过，7 项未通过

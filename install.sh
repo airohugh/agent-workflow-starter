@@ -87,8 +87,8 @@ echo "   新开一个终端窗口后生效"
 
 echo
 echo "== 3/4 VS Code 扩展 =="
-if [ "${AWS_SKIP_EXTENSIONS:-}" = "1" ]; then
-  echo "· 已设置 AWS_SKIP_EXTENSIONS=1，跳过"
+if [ "${STARTER_SKIP_EXTENSIONS:-}" = "1" ]; then
+  echo "· 已设置 STARTER_SKIP_EXTENSIONS=1，跳过"
 elif command -v code >/dev/null 2>&1; then
   code --install-extension anthropic.claude-code || echo "⚠️ Claude Code 扩展安装失败，请手动装"
   code --install-extension openai.chatgpt || echo "⚠️ Codex 扩展安装失败，请手动装"

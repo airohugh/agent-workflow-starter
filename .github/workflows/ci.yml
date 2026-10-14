@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           export HOME="$(mktemp -d)"
-          export AWS_SKIP_EXTENSIONS=1
+          export STARTER_SKIP_EXTENSIONS=1
           ./install.sh
           n1=$(wc -l < "$HOME/.agent-workflow-starter/manifest.tsv" | tr -d ' ')
           ./install.sh
@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           export HOME="$(mktemp -d)"
-          export AWS_SKIP_EXTENSIONS=1
+          export STARTER_SKIP_EXTENSIONS=1
           mkdir -p "$HOME/.claude" "$HOME/.codex"
           echo old > "$HOME/.claude/CLAUDE.md"
           echo old > "$HOME/.codex/AGENTS.md"
@@ -61,7 +61,7 @@ jobs:
         run: |
           set -uo pipefail
           export HOME="$(mktemp -d)"
-          export AWS_SKIP_EXTENSIONS=1
+          export STARTER_SKIP_EXTENSIONS=1
           ./install.sh
           ./check.sh > check.out 2>&1 || true
           cat check.out
