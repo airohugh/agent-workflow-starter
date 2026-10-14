@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "startup", "hooks": [ { "type": "command", "command": "\"$HOME\"/.claude/hooks/unpushed-reminder.sh" } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "\"$HOME\"/.claude/hooks/git-status-after-add.sh" } ] }
+    ]
+  }
+}

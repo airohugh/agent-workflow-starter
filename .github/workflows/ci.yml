@@ -1,0 +1,72 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 语法检查（bash -n）
+        shell: bash
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            echo "bash -n $f"
+            bash -n "$f" || fail=1
+          done < <(find . -name '*.sh' -not -path './.git/*')
+          exit $fail
+
+      - name: install.sh 幂等（跑两次不产生新备份、manifest 不变）
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$(mktemp -d)"
+          export AWS_SKIP_EXTENSIONS=1
+          ./install.sh
+          n1=$(wc -l < "$HOME/.agent-workflow-starter/manifest.tsv" | tr -d ' ')
+          ./install.sh
+          n2=$(wc -l < "$HOME/.agent-workflow-starter/manifest.tsv" | tr -d ' ')
+          echo "manifest 行数：第一次 ${n1}，第二次 ${n2}"
+          [ "$n1" = "$n2" ] || { echo "manifest 行数变了"; exit 1; }
+          baks=$(find "$HOME" -name '*.bak-*')
+          [ -z "$baks" ] || { echo "出现了不该有的备份：$baks"; exit 1; }
+
+      - name: 备份与卸载还原
+        shell: bash
+        run: |
+          set -euo pipefail
+          export HOME="$(mktemp -d)"
+          export AWS_SKIP_EXTENSIONS=1
+          mkdir -p "$HOME/.claude" "$HOME/.codex"
+          echo old > "$HOME/.claude/CLAUDE.md"
+          echo old > "$HOME/.codex/AGENTS.md"
+          ./install.sh
+          for f in "$HOME/.claude/CLAUDE.md" "$HOME/.codex/AGENTS.md"; do
+            b=$(ls "$f".bak-* | head -1)
+            [ "$(cat "$b")" = "old" ] || { echo "备份内容不是 old：$b"; exit 1; }
+          done
+          ./uninstall.sh
+          [ "$(cat "$HOME/.claude/CLAUDE.md")" = "old" ] || { echo "CLAUDE.md 没还原"; exit 1; }
+          [ "$(cat "$HOME/.codex/AGENTS.md")" = "old" ] || { echo "AGENTS.md 没还原"; exit 1; }
+          if [ -f "$HOME/.zprofile" ] && grep -q 'agent-workflow-starter' "$HOME/.zprofile"; then
+            echo ".zprofile 里还有标记行"; exit 1
+          fi
+
+      - name: check.sh 能报出绿项和红项
+        shell: bash
+        run: |
+          set -uo pipefail
+          export HOME="$(mktemp -d)"
+          export AWS_SKIP_EXTENSIONS=1
+          ./install.sh
+          ./check.sh > check.out 2>&1 || true
+          cat check.out
+          for id in rules-claude rules-codex review-script hooks-files; do
+            grep -qF "✅ [$id]" check.out || { echo "缺少 ✅ [$id]"; exit 1; }
+          done
+          grep -qF "❌ [claude-login]" check.out || grep -qF "❌ [claude-cli]" check.out \
+            || { echo "CI 机器没登录，应出现 ❌ claude-login 或 claude-cli"; exit 1; }
