@@ -10,8 +10,8 @@
 set -u
 input=$(cat)
 
-# 触发判断、目录定位都在一段 python 里做，输出三行：定位到的目录、命令里 cd 是否出现多次(0/1)、
-# 定位是否可能不准(0/1：用了 --git-dir/--work-tree，或选项解析失败)。
+# 触发判断、目录定位都在一段 python 里做，输出三行：定位到的目录、开头以外是否还有 cd(0/1)、
+# 定位是否可能不准(0/1：用了 --git-dir/--work-tree，或路径/选项解析失败)。
 # 没输出 = 不触发或解析失败，静默退出。
 #
 # 触发：只在「命令段开头」匹配（行首，或 ; & | ( ` 之后，可带路径前缀如 /usr/bin/git）。
@@ -24,9 +24,9 @@ input=$(cat)
 #
 # 定位：输入 JSON 顶层的 cwd 是 shell 的起始目录。命令内部 `cd /别的仓 && git commit` 或 `git -C 仓 add` 时
 # git 在别处跑，照 cwd 报 status 会给出另一个仓的内容——核对工具给错核对结果比不给更糟。
-# 所以按顺序叠加命令里的 cd 目标（相对路径逐级解析）、再叠加触发段里的 -C 路径（相对路径逐级相对解析）。
-# 只叠加出现在最后一个触发段之前的 cd（git 之后的 cd 不影响 git 在哪跑）。括号里的 cd（子 shell、$(...)）只在括号内生效，
-# 不解析，出现就提示定位可能不准。多个 cd 时也提示。仓库路径一并回显，取错看得出来。
+# 只解析最常见、能确定的两种：命令开头的 `cd 路径 &&`（或 ; 、换行），以及触发段里的 -C 路径（相对路径逐级解析）。
+# 别处再出现 cd（git 之后、括号/子 shell 里、换行分隔的多个 cd）不去猜作用域，只提示定位可能不准。
+# 仓库路径一并回显，取错看得出来。
 loc=$(printf '%s' "$input" | python3 -c '
 import json,os,re,shlex,sys
 d = json.load(sys.stdin)
@@ -44,12 +44,21 @@ def unq(x):
         x = x[1:-1]
     return os.path.expanduser(x)
 cur = d.get("cwd") or os.getcwd()
-cd_ms = [m for m in re.finditer(r"(?:^|[;&|(])\s*cd\s+([^;&|)]+)", cmd) if m.start() < ms[-1].start()]
-cds = [m.group(1) for m in cd_ms]
-for c in cds:
-    cur = os.path.join(cur, unq(c))
+loose = 0
+rest = cmd
+m0 = re.match(r"\s*cd\s+(.+?)\s*(?:&&|;|\n)", cmd)
+if m0:
+    try:
+        t = shlex.split("cd " + m0.group(1))
+    except ValueError:
+        t = []
+    if len(t) == 2:
+        cur = os.path.join(cur, os.path.expanduser(t[1]))
+        rest = cmd[m0.end():]
+    else:
+        loose = 1
+other_cd = 1 if re.search(r"(?:^|[^\w./-])cd(?:\s|$)", rest) else 0
 opts = ms[-1].group(1)
-loose = 1 if any(m.group(0).startswith("(") for m in cd_ms) else 0
 try:
     # 按参数边界解析：只有参数位置上的 -C <路径> 才是目录；-c <值> 与 --xxx[=值] 整个跳过，
     # 避免把 -c "core.sshCommand=ssh -C -i key" 里的 -C 当成目录。
@@ -73,13 +82,15 @@ if re.search(r"--(?:git-dir|work-tree)\b", opts):
     loose = 1
 for c in dirs:
     cur = os.path.join(cur, unq(c))
+if "\n" in cur:
+    sys.exit(0)
 print(cur)
-print(1 if len(cds) >= 2 else 0)
+print(other_cd)
 print(loose)
 ' 2>/dev/null) || exit 0
 [ -n "$loc" ] || exit 0
 target=$(printf '%s\n' "$loc" | sed -n 1p)
-multi_cd=$(printf '%s\n' "$loc" | sed -n 2p)
+other_cd=$(printf '%s\n' "$loc" | sed -n 2p)
 loose=$(printf '%s\n' "$loc" | sed -n 3p)
 # 目录不存在就别在错的目录上报 status
 cd "$target" 2>/dev/null || exit 0
@@ -91,9 +102,9 @@ status=$(git status --short | head -40)
 staged=$(git diff --cached --name-only | wc -l | tr -d ' ')
 
 note=""
-if [ "$multi_cd" = "1" ]; then note="命令里有多个 cd，下面的仓库定位可能不准，请自行核对仓库路径。
+if [ "$other_cd" = "1" ]; then note="命令里除了开头的 cd 还有别的 cd（git 之后、括号里或多行），下面的仓库定位可能不准，请自行核对仓库路径。
 "; fi
-if [ "$loose" = "1" ]; then note="${note}命令用了 --git-dir/--work-tree、在括号里 cd，或选项无法解析，下面的仓库定位可能不准，请自行核对。
+if [ "$loose" = "1" ]; then note="${note}命令用了 --git-dir/--work-tree，或路径与选项无法解析，下面的仓库定位可能不准，请自行核对。
 "; fi
 
 printf '%s%s\n%s' "$note" "[git-status-after-add] 仓库 ${repo}，分支 ${branch}，已 staged ${staged} 个文件。git status --short 前 40 行（核对真的 staged 了、没混入无关文件）：" "$status" \
