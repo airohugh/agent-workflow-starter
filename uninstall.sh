@@ -45,17 +45,26 @@ $target"
       grep -v "# $MARK" "$ZP" > "$tmp" || true
       if [ "$backup" = "-" ] && [ ! -s "$tmp" ]; then
         if [ -L "$ZP" ]; then
-          : > "$ZP"
-          rm -f "$tmp"
-          echo "✅ $ZP 是符号链接，只剩我们那一行：保留链接，已清空它指向的文件"
+          if : > "$ZP"; then
+            rm -f "$tmp"
+            echo "✅ $ZP 是符号链接，只剩我们那一行：保留链接，已清空它指向的文件"
+          else
+            echo "⚠️ 清空 $ZP 失败，未改动；临时文件保留在 ${tmp}"
+            FAILED=$((FAILED+1))
+          fi
         else
           rm -f "$tmp" "$ZP"
           echo "✅ $ZP 只剩我们那一行，已删除整个文件（原本就是我们创建的）"
         fi
       else
         # 写到目标而不是 mv 替换：.zprofile 若是符号链接，链接要保留
-        cat "$tmp" > "$ZP" && rm -f "$tmp"
-        echo "✅ 已从 $ZP 删除带标记的 PATH 行"
+        if cat "$tmp" > "$ZP"; then
+          rm -f "$tmp"
+          echo "✅ 已从 $ZP 删除带标记的 PATH 行"
+        else
+          echo "⚠️ 写回 $ZP 失败，$ZP 可能已被截断；去掉标记行后的完整内容保留在 ${tmp}，请手动 cp 回去"
+          FAILED=$((FAILED+1))
+        fi
       fi
     else
       echo "· $ZP 里没有标记行，不动"
@@ -66,7 +75,21 @@ $backup"; fi
   fi
 
   if [ ! -f "$target" ]; then
-    echo "· $target 已不存在，跳过"
+    if [ "$backup" = "-" ]; then
+      echo "· $target 已不存在，跳过"
+    elif [ -f "$backup" ]; then
+      if mkdir -p "$(dirname "$target")" && cp -p "$backup" "$target"; then
+        KEPT="$KEPT
+$backup"
+        echo "✅ 已还原 ${target}（目标原本已被删除，来自 ${backup}）"
+      else
+        echo "⚠️ 还原 ${target} 失败（来自 ${backup}）"
+        FAILED=$((FAILED+1))
+      fi
+    else
+      echo "⚠️ $target 已不存在，且备份 ${backup} 也不见了，无法还原"
+      FAILED=$((FAILED+1))
+    fi
     continue
   fi
   if ! grep -q "$MARK" "$target"; then

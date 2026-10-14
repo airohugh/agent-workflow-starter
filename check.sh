@@ -151,34 +151,66 @@ elif [ ! -f "$SETTINGS" ]; then
   bad hooks-settings "~/.claude/settings.json 不存在" "$HOOK_FIX"
 else
   hs=$(SETTINGS="$SETTINGS" python3 -c '
-import json, os, sys
+import json, os, re, sys
 try:
     with open(os.environ["SETTINGS"]) as f:
         d = json.load(f)
 except Exception:
     print("INVALID"); sys.exit(0)
-def has_cmd(event, matcher_ok, needle):
-    h = d.get("hooks") if isinstance(d, dict) else None
-    groups = h.get(event) if isinstance(h, dict) else None
-    if not isinstance(groups, list):
+def matches_bash(m):
+    # Claude Code matcher：缺省、空串、"*" 匹配所有；否则当正则整串匹配工具名
+    if m is None or m == "" or m == "*":
+        return True
+    if not isinstance(m, str):
         return False
+    try:
+        return re.fullmatch(m, "Bash") is not None
+    except re.error:
+        return m == "Bash"
+def has_cmd(event, bash_only, needle):
+    h = d.get("hooks") if isinstance(d, dict) else None
+    if h is None:
+        return False
+    if not isinstance(h, dict):
+        raise ValueError("hooks 不是对象")
+    groups = h.get(event)
+    if groups is None:
+        return False
+    if not isinstance(groups, list):
+        raise ValueError(event + " 不是列表")
+    found = False
     for g in groups:
-        if not isinstance(g, dict) or not matcher_ok(g.get("matcher", "")):
+        if not isinstance(g, dict):
+            raise ValueError(event + " 里有不是对象的条目")
+        inner = g.get("hooks")
+        if inner is None:
             continue
-        for x in g.get("hooks") or []:
-            if isinstance(x, dict) and needle in str(x.get("command", "")):
-                return True
-    return False
-miss = []
-if not has_cmd("SessionStart", lambda m: True, "unpushed-reminder.sh"):
-    miss.append("unpushed-reminder.sh（SessionStart）")
-if not has_cmd("PostToolUse", lambda m: "Bash" in str(m), "git-status-after-add.sh"):
-    miss.append("git-status-after-add.sh（PostToolUse，matcher 为 Bash）")
+        if not isinstance(inner, list):
+            raise ValueError(event + " 的嵌套 hooks 不是列表")
+        if bash_only and not matches_bash(g.get("matcher")):
+            continue
+        for x in inner:
+            if not isinstance(x, dict):
+                raise ValueError(event + " 的嵌套 hooks 里有不是对象的条目")
+            c = x.get("command")
+            if x.get("type") == "command" and isinstance(c, str) and needle in c:
+                found = True
+    return found
+try:
+    miss = []
+    if not has_cmd("SessionStart", False, "unpushed-reminder.sh"):
+        miss.append("unpushed-reminder.sh（SessionStart）")
+    if not has_cmd("PostToolUse", True, "git-status-after-add.sh"):
+        miss.append("git-status-after-add.sh（PostToolUse，matcher 须匹配 Bash）")
+except ValueError as e:
+    print("STRUCT " + str(e)); sys.exit(0)
 print("MISSING " + "、".join(miss) if miss else "OK")
 ' 2>/dev/null) || hs="INVALID"
   case "$hs" in
     OK)
       ok hooks-settings "settings.json 里两个钩子的配置结构正确（是否真触发，开一个新会话看）" ;;
+    STRUCT*)
+      bad hooks-settings "~/.claude/settings.json 是合法 JSON，但 hooks 段结构不对：${hs#STRUCT }" "$HOOK_FIX" ;;
     MISSING*)
       bad hooks-settings "~/.claude/settings.json 里缺少钩子配置：${hs#MISSING }" "$HOOK_FIX" ;;
     *)
