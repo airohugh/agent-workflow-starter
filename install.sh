@@ -112,5 +112,5 @@ else
 fi
 
 echo
-echo "安装完成。交叉复核要用终端里的 codex 命令，请按 README 第 3 步安装（终端里的 claude 可选）。"
+echo "安装完成。交叉复核要用终端里的 codex 命令，请按 README 第 5 步安装（终端里的 claude 可选）。"
 echo "下一步：新开终端，进入本目录跑 ./check.sh"

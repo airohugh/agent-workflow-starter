@@ -115,6 +115,9 @@ else
   bad codex-cli "codex 命令行不可用（交叉复核脚本要在终端里调用它）" \
     "curl -fsSL https://chatgpt.com/codex/install.sh | sh，然后新开终端" \
     "（备选，非官方）转接 Codex 扩展自带的那份，见 docs/setup-vscode.md 第 3 步"
+  if [ -e "$HOME/bin/codex" ]; then
+    echo "   注意：~/bin/codex 已存在、排在 PATH 最前；它若是失效的转接脚本，先 rm ~/bin/codex 再装官方命令行，否则官方那份会被它挡住"
+  fi
 fi
 if [ "$CODEX_OK" = 1 ]; then
   if run codex login status >/dev/null 2>&1; then
@@ -169,17 +172,18 @@ try:
         d = json.load(f)
 except Exception:
     print("INVALID"); sys.exit(0)
-def matches_bash(m):
-    # Claude Code matcher：缺省、空串、"*" 匹配所有；否则当正则整串匹配工具名
+def matches(m, target):
+    # Claude Code matcher：缺省、空串、"*" 匹配所有；否则当正则整串匹配
+    # （PostToolUse 匹配工具名 Bash，SessionStart 匹配启动来源 startup）
     if m is None or m == "" or m == "*":
         return True
     if not isinstance(m, str):
         return False
     try:
-        return re.fullmatch(m, "Bash") is not None
+        return re.fullmatch(m, target) is not None
     except re.error:
-        return m == "Bash"
-def has_cmd(event, bash_only, needle):
+        return m == target
+def has_cmd(event, target, needle):
     h = d.get("hooks") if isinstance(d, dict) else None
     if h is None:
         return False
@@ -199,7 +203,7 @@ def has_cmd(event, bash_only, needle):
             continue
         if not isinstance(inner, list):
             raise ValueError(event + " 的嵌套 hooks 不是列表")
-        if bash_only and not matches_bash(g.get("matcher")):
+        if not matches(g.get("matcher"), target):
             continue
         for x in inner:
             if not isinstance(x, dict):
@@ -210,9 +214,9 @@ def has_cmd(event, bash_only, needle):
     return found
 try:
     miss = []
-    if not has_cmd("SessionStart", False, "unpushed-reminder.sh"):
-        miss.append("unpushed-reminder.sh（SessionStart）")
-    if not has_cmd("PostToolUse", True, "git-status-after-add.sh"):
+    if not has_cmd("SessionStart", "startup", ".claude/hooks/unpushed-reminder.sh"):
+        miss.append("unpushed-reminder.sh（SessionStart，matcher 须匹配 startup）")
+    if not has_cmd("PostToolUse", "Bash", ".claude/hooks/git-status-after-add.sh"):
         miss.append("git-status-after-add.sh（PostToolUse，matcher 须匹配 Bash）")
 except ValueError as e:
     print("STRUCT " + str(e)); sys.exit(0)
@@ -220,7 +224,7 @@ print("MISSING " + "、".join(miss) if miss else "OK")
 ' 2>/dev/null) || hs="INVALID"
   case "$hs" in
     OK)
-      ok hooks-settings "settings.json 里两个钩子的配置结构正确（是否真触发，开一个新会话看）" ;;
+      ok hooks-settings "settings.json 里找到两个钩子的配置（只查了配置，是否真触发，开一个新会话看）" ;;
     STRUCT*)
       bad hooks-settings "~/.claude/settings.json 是合法 JSON，但 hooks 段结构不对：${hs#STRUCT }" "$HOOK_FIX" ;;
     MISSING*)

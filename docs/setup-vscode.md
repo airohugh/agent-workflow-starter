@@ -1,6 +1,6 @@
 # 第 0 节：VS Code 初始配置
 
-按顺序做。每一步都有「怎么确认做好了」。卡住了就跑一遍 `./check.sh`，它会告诉你哪一项红、怎么修。
+README「上手」表的展开版。每一步都有「怎么确认做好了」。卡住了就跑一遍 `./check.sh`，它会告诉你哪一项红、怎么修。
 
 ## 1. 装 VS Code
 
@@ -39,7 +39,7 @@
 
   装完新开终端，`codex --version` 能打印版本号即可。
 
-**不想另装 Codex 命令行的备选（非官方）：** Codex 扩展目录里自带一个完整的 `codex` 程序，可以在 `~/bin` 放一个转接脚本去调用它（`install.sh` 已经把 `~/bin` 加进 PATH）。这条路官方文档没写，扩展哪天改了目录结构就会失效，到时 `check.sh` 会报红，改装上面的官方命令行即可。
+**不想另装 Codex 命令行的备选（非官方）：** Codex 扩展目录里自带一个完整的 `codex` 程序，可以在 `~/bin` 放一个转接脚本去调用它（`install.sh` 会把 `~/bin` 加进 PATH，所以这一步放在跑完 `install.sh` 之后）。这条路官方文档没写，扩展哪天改了目录结构就会失效，到时 `check.sh` 会报红：先 `rm ~/bin/codex`，再装上面的官方命令行（`~/bin` 排在 PATH 最前，不删会挡住官方那份）。
 
 ```bash
 mkdir -p ~/bin && cat > ~/bin/codex <<'EOF'
@@ -74,7 +74,7 @@ claude auth status     # 装了 claude 命令行才有：输出里有 "loggedIn"
 
 macOS 默认的 shell 是 zsh。`install.sh` 会在 `~/.zprofile` 末尾加一行，把 `~/bin` 放进 PATH（`codex-review.sh` 装在那里）。**这一行要新开终端才生效。** 如果你用的是 bash 或别的 shell，请自己把 `~/bin` 加进对应的配置文件。
 
-VS Code 里的集成终端（`` Ctrl+` ``）同样需要重开才会读到新的 PATH。在 Claude Code 面板里让它跑复核时，如果报找不到 `codex-review.sh`，彻底退出 VS Code（`Cmd+Q`）再打开，或者直接写全路径 `~/bin/codex-review.sh`。
+VS Code 里的集成终端（`` Ctrl+` ``）同样需要重开才会读到新的 PATH。在 Claude Code 面板里让它跑复核时，如果报找不到 `codex-review.sh` 或 `codex`，彻底退出 VS Code（`Cmd+Q`）再打开；只是找不到 `codex-review.sh` 的话，也可以直接写全路径 `~/bin/codex-review.sh`。
 
 ## 6. 解释器
 

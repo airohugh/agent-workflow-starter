@@ -25,7 +25,8 @@ input=$(cat)
 # 定位：输入 JSON 顶层的 cwd 是 shell 的起始目录。命令内部 `cd /别的仓 && git commit` 或 `git -C 仓 add` 时
 # git 在别处跑，照 cwd 报 status 会给出另一个仓的内容——核对工具给错核对结果比不给更糟。
 # 所以按顺序叠加命令里的 cd 目标（相对路径逐级解析）、再叠加触发段里的 -C 路径（相对路径逐级相对解析）。
-# 已知不准：`cd /a && git add x && cd /b` 会取到 /b；多个 cd 时会在输出里提示。仓库路径一并回显，取错看得出来。
+# 只叠加出现在最后一个触发段之前的 cd（git 之后的 cd 不影响 git 在哪跑）。括号里的 cd（子 shell、$(...)）只在括号内生效，
+# 不解析，出现就提示定位可能不准。多个 cd 时也提示。仓库路径一并回显，取错看得出来。
 loc=$(printf '%s' "$input" | python3 -c '
 import json,os,re,shlex,sys
 d = json.load(sys.stdin)
@@ -43,11 +44,12 @@ def unq(x):
         x = x[1:-1]
     return os.path.expanduser(x)
 cur = d.get("cwd") or os.getcwd()
-cds = re.findall(r"(?:^|[;&|(])\s*cd\s+([^;&|]+)", cmd)
+cd_ms = [m for m in re.finditer(r"(?:^|[;&|(])\s*cd\s+([^;&|)]+)", cmd) if m.start() < ms[-1].start()]
+cds = [m.group(1) for m in cd_ms]
 for c in cds:
     cur = os.path.join(cur, unq(c))
 opts = ms[-1].group(1)
-loose = 0
+loose = 1 if any(m.group(0).startswith("(") for m in cd_ms) else 0
 try:
     # 按参数边界解析：只有参数位置上的 -C <路径> 才是目录；-c <值> 与 --xxx[=值] 整个跳过，
     # 避免把 -c "core.sshCommand=ssh -C -i key" 里的 -C 当成目录。
@@ -91,7 +93,7 @@ staged=$(git diff --cached --name-only | wc -l | tr -d ' ')
 note=""
 if [ "$multi_cd" = "1" ]; then note="命令里有多个 cd，下面的仓库定位可能不准，请自行核对仓库路径。
 "; fi
-if [ "$loose" = "1" ]; then note="${note}命令用了 --git-dir/--work-tree（或选项无法解析），下面的仓库定位可能不准，请自行核对。
+if [ "$loose" = "1" ]; then note="${note}命令用了 --git-dir/--work-tree、在括号里 cd，或选项无法解析，下面的仓库定位可能不准，请自行核对。
 "; fi
 
 printf '%s%s\n%s' "$note" "[git-status-after-add] 仓库 ${repo}，分支 ${branch}，已 staged ${staged} 个文件。git status --short 前 40 行（核对真的 staged 了、没混入无关文件）：" "$status" \

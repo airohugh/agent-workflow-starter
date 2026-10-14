@@ -45,6 +45,9 @@ LIMIT=${3:-2400}
 
 [ -f "$PROMPT" ] || { echo "找不到 prompt 文件：$PROMPT" >&2; exit 2; }
 
+# 用全路径调用本脚本时，~/bin 可能不在 PATH 里；把脚本所在目录放到最前，同目录的 codex 转接脚本也能找到
+PATH="$(cd "$(dirname "$0")" && pwd):$PATH"
+
 if ! command -v codex >/dev/null 2>&1; then
   echo "PATH 里找不到 codex。官方安装命令：" >&2
   echo "  curl -fsSL https://chatgpt.com/codex/install.sh | sh" >&2

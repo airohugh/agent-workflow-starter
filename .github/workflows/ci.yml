@@ -71,3 +71,20 @@ jobs:
           done
           grep -qF "❌ [claude-login]" "$out" || grep -qF "❌ [claude-cli]" "$out" \
             || { echo "CI 机器没登录，应出现 ❌ claude-login 或 claude-cli"; exit 1; }
+
+      - name: 只装扩展、没有终端 claude 时 claude 两项报黄不报红
+        shell: bash
+        run: |
+          set -uo pipefail
+          export HOME="$(mktemp -d)"
+          export STARTER_SKIP_EXTENSIONS=1
+          ./install.sh
+          mkdir -p "$HOME/.vscode/extensions/anthropic.claude-code-0.0.0"
+          out="$HOME/check.out"
+          PATH="/usr/bin:/bin:/usr/sbin:/sbin" ./check.sh > "$out" 2>&1 || true
+          cat "$out"
+          grep -qF "✅ [ext-claude]" "$out" || { echo "缺少 ✅ [ext-claude]"; exit 1; }
+          for id in claude-cli claude-login; do
+            grep -qF "⚠️ [$id]" "$out" || { echo "缺少 ⚠️ [$id]"; exit 1; }
+            ! grep -qF "❌ [$id]" "$out" || { echo "[$id] 不该是 ❌"; exit 1; }
+          done

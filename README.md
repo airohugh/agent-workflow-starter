@@ -33,16 +33,16 @@
 | 步 | 做什么 | 怎么做 |
 |---|---|---|
 | 1 | 装 VS Code | <https://code.visualstudio.com> 下载，拖进「应用程序」 |
-| 2 | 装两个扩展：Claude Code、Codex | `install.sh` 会替你装（需要 `code` 命令在 PATH 里）；否则按 [docs/setup-vscode.md](docs/setup-vscode.md) 第 2 步点链接 |
-| 3 | 装 Codex 命令行 | `curl -fsSL https://chatgpt.com/codex/install.sh \| sh`，装完新开终端。复核脚本要在终端里调用 `codex`；终端里的 `claude` 可选，不装也行。不想另装的备选见 [docs/setup-vscode.md](docs/setup-vscode.md) 第 3 步 |
-| 4 | 登录 | 在 VS Code 里分别打开 Claude Code 和 Codex 面板，点 Sign in（Codex 选 Sign in with ChatGPT）。面板的登录和命令行共用，登录一次就行 |
-| 5 | 拿到本仓库 | `git clone <本仓库地址> ~/agent-workflow-starter && cd ~/agent-workflow-starter` |
-| 6 | 安装 | `./install.sh` |
+| 2 | 拿到本仓库 | `git clone https://github.com/airohugh/agent-workflow-starter.git ~/agent-workflow-starter && cd ~/agent-workflow-starter` |
+| 3 | 安装 | `./install.sh`：装规则、复核脚本、钩子，把 `~/bin` 加进 PATH；`code` 命令在 PATH 里时顺带装两个扩展 |
+| 4 | 装两个扩展：Claude Code、Codex | 上一步没替你装的话，按 [docs/setup-vscode.md](docs/setup-vscode.md) 第 2 步点链接 |
+| 5 | 装 Codex 命令行 | `curl -fsSL https://chatgpt.com/codex/install.sh \| sh`，装完新开终端。复核脚本要在终端里调用 `codex`；终端里的 `claude` 可选，不装也行。不想另装的备选见 [docs/setup-vscode.md](docs/setup-vscode.md) 第 3 步 |
+| 6 | 登录 | 在 VS Code 里分别打开 Claude Code 和 Codex 面板，点 Sign in（Codex 选 Sign in with ChatGPT）。面板的登录和命令行共用，登录一次就行 |
 | 7 | 合并钩子配置 | 在 VS Code 里打开 Claude Code，说一句：「把 ~/agent-workflow-starter/hooks/settings-snippet.json 合进 ~/.claude/settings.json」 |
-| 8 | 自检 | **新开一个终端**，`cd ~/agent-workflow-starter && ./check.sh`，看到全绿 |
+| 8 | 自检 | **新开一个终端**，`cd ~/agent-workflow-starter && ./check.sh`，最后一行是 `0 项未通过` 就行（⚠️ 黄色项不影响使用） |
 | 9 | 第一次真用 | 见下一节 |
 
-拿到本仓库（第 5 步）之后，哪一步卡住都可以先跑 `./check.sh`：每个红项下面都写了修法。各项的详细说明与红项截图见 [docs/setup-vscode.md](docs/setup-vscode.md)。
+拿到本仓库（第 2 步）之后，哪一步卡住都可以先跑 `./check.sh`：每个红项下面都写了修法。各项的详细说明与红项截图见 [docs/setup-vscode.md](docs/setup-vscode.md)。
 
 ## 第一次真用：拿一份自己的分析跑一轮交叉复核
 
@@ -93,7 +93,7 @@ cd ~/agent-workflow-starter && ./uninstall.sh
 - 只在 macOS 上验证过。Windows 见 [docs/windows.md](docs/windows.md)。
 - `install.sh` 只往 `~/.zprofile`（zsh）加 PATH；用别的 shell 要自己加 `~/bin`。
 - 每轮复核都会消耗 ChatGPT 账户的用量，撞到上限时要等几个小时恢复。
-- `git-status-after-add.sh` 是辅助提醒，不是保证：参数中间带引号（如 `git -c user.name="A B" commit`）、用变量写路径（如 `git -C "$DIR" add`）时可能不注入；命令里有多个 `cd` 或用了 `--git-dir`/`--work-tree` 时只提示「定位可能不准」。提交前仍请看一眼 `git status --short`。
+- `git-status-after-add.sh` 是辅助提醒，不是保证：参数中间带引号（如 `git -c user.name="A B" commit`）、用变量写路径（如 `git -C "$DIR" add`）时可能不注入；命令里有多个 `cd`、在括号里 `cd`（子 shell、`$(...)`）或用了 `--git-dir`/`--work-tree` 时只提示「定位可能不准」。提交前仍请看一眼 `git status --short`。
 - `uninstall.sh` 假定装上去的文件仍是普通文件；如果你把它们换成了目录等其他类型，请手动处理。
 
 ## 许可
