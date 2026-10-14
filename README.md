@@ -1,6 +1,6 @@
 # agent-workflow-starter
 
-**前提：一个 Claude 付费账号（Pro / Max / Team / Enterprise）和一个 ChatGPT 付费账号（Plus 及以上），各一个。两边的免费账号都用不了本仓库依赖的命令行工具。**
+**前提：一个 Claude 付费账号（Pro / Max / Team / Enterprise）和一个 ChatGPT 付费账号（Plus 及以上），各一个。两边的免费账号都用不了，ChatGPT 的 Go 也不行。**
 
 > **English summary.** A starter kit for a two-vendor workflow inside VS Code: Claude Code does the work, OpenAI Codex does a read-only cross-review, so hallucinations get caught by a model that doesn't share the same blind spots. It ships a vendor-neutral rule file for each tool, a one-command review script with the three flags people always forget, two small Claude Code hooks, and templates. macOS only (verified); Windows is untested. Body text is in Chinese. Requires a paid Claude plan and a paid ChatGPT plan (Plus or above).
 
@@ -34,8 +34,8 @@
 |---|---|---|
 | 1 | 装 VS Code | <https://code.visualstudio.com> 下载，拖进「应用程序」 |
 | 2 | 装两个扩展：Claude Code、Codex | `install.sh` 会替你装（需要 `code` 命令在 PATH 里）；否则按 [docs/setup-vscode.md](docs/setup-vscode.md) 第 2 步点链接 |
-| 3 | 装两个命令行工具 | `curl -fsSL https://claude.ai/install.sh \| bash` 和 `curl -fsSL https://chatgpt.com/codex/install.sh \| sh`，装完新开终端 |
-| 4 | 登录 | 终端运行 `claude` 按提示登录；运行 `codex login` 选 Sign in with ChatGPT |
+| 3 | 装 Codex 命令行 | `curl -fsSL https://chatgpt.com/codex/install.sh \| sh`，装完新开终端。复核脚本要在终端里调用 `codex`；终端里的 `claude` 可选，不装也行。不想另装的备选见 [docs/setup-vscode.md](docs/setup-vscode.md) 第 3 步 |
+| 4 | 登录 | 在 VS Code 里分别打开 Claude Code 和 Codex 面板，点 Sign in（Codex 选 Sign in with ChatGPT）。面板的登录和命令行共用，登录一次就行 |
 | 5 | 拿到本仓库 | `git clone <本仓库地址> ~/agent-workflow-starter && cd ~/agent-workflow-starter` |
 | 6 | 安装 | `./install.sh` |
 | 7 | 合并钩子配置 | 在 VS Code 里打开 Claude Code，说一句：「把 ~/agent-workflow-starter/hooks/settings-snippet.json 合进 ~/.claude/settings.json」 |

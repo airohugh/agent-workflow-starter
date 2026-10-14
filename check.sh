@@ -67,16 +67,23 @@ else
 fi
 
 # --- Claude Code ---
+# 终端里的 claude 是可选的：扩展自带一份给面板用，本仓的规则和钩子在扩展里照样生效（官方文档）。
+# 只有扩展和终端 claude 都没有时才算红。
 CLAUDE_OK=0
+EXT_CLAUDE=0
+if ext_present anthropic.claude-code; then EXT_CLAUDE=1; fi
+CLAUDE_FIX="curl -fsSL https://claude.ai/install.sh | bash，然后新开终端"
+CLAUDE_FIX2="装过了还找不到：官方安装位置是 ~/.local/bin，把它加进 PATH 后新开终端"
 if ! has claude; then
-  if [ -e "$HOME/.local/bin/claude" ]; then
-    bad claude-cli "claude 命令不在 PATH 里（~/.local/bin/claude 已存在，只是不在 PATH 里）" \
-      "curl -fsSL https://claude.ai/install.sh | bash，然后新开终端" \
-      "装过了还找不到：官方安装位置是 ~/.local/bin，把它加进 PATH 后新开终端"
+  if [ "$EXT_CLAUDE" = 1 ]; then
+    warn claude-cli "终端里没有 claude 命令（可选：本仓的规则和钩子在 VS Code 扩展里照样生效，只有想在终端里用 claude 才需要装）" \
+      "$CLAUDE_FIX" "$CLAUDE_FIX2"
+  elif [ -e "$HOME/.local/bin/claude" ]; then
+    bad claude-cli "claude 命令不在 PATH 里（~/.local/bin/claude 已存在，只是不在 PATH 里），也没装 Claude Code 扩展" \
+      "先装扩展（见上面 ext-claude 一项）" "$CLAUDE_FIX2"
   else
-    bad claude-cli "claude 命令行不可用（PATH 里没有 claude）" \
-      "curl -fsSL https://claude.ai/install.sh | bash，然后新开终端" \
-      "装过了还找不到：官方安装位置是 ~/.local/bin，把它加进 PATH 后新开终端"
+    bad claude-cli "claude 命令行不可用（PATH 里没有 claude），也没装 Claude Code 扩展" \
+      "先装扩展（见上面 ext-claude 一项）；想在终端里用 claude 再装命令行：$CLAUDE_FIX"
   fi
 elif ! run claude --version >/dev/null 2>&1; then
   bad claude-cli "claude 命令存在，但 claude --version 运行失败" \
@@ -85,13 +92,16 @@ else
   CLAUDE_OK=1
   ok claude-cli "claude 命令行可用"
 fi
+CLAUDE_LOGIN_FIX="在 VS Code 的 Claude Code 面板点 Sign in（或终端运行 claude），用 Pro/Max/Team/Enterprise 账号登录；免费账号不行"
 if [ "$CLAUDE_OK" = 1 ]; then
   if run claude auth status 2>&1 | grep -Eq '"loggedIn"[[:space:]]*:[[:space:]]*true'; then
     ok claude-login "Claude Code 已登录"
   else
-    bad claude-login "Claude Code 未登录" \
-      "运行 claude（或在 VS Code 的 Claude Code 面板点 Sign in），用 Pro/Max/Team/Enterprise 账号登录；免费账号不行"
+    bad claude-login "Claude Code 未登录" "$CLAUDE_LOGIN_FIX"
   fi
+elif [ "$EXT_CLAUDE" = 1 ] && ! has claude; then
+  warn claude-login "没有终端 claude，没法在这里核实登录；在 VS Code 的 Claude Code 面板里能正常对话就是已登录" \
+    "$CLAUDE_LOGIN_FIX"
 else
   bad claude-login "无法检查登录状态：先修 claude-cli" "先修上一项 claude-cli"
 fi
@@ -102,14 +112,16 @@ if has codex && run codex --version >/dev/null 2>&1; then
   CODEX_OK=1
   ok codex-cli "codex 命令行可用"
 else
-  bad codex-cli "codex 命令行不可用" "curl -fsSL https://chatgpt.com/codex/install.sh | sh，然后新开终端"
+  bad codex-cli "codex 命令行不可用（交叉复核脚本要在终端里调用它）" \
+    "curl -fsSL https://chatgpt.com/codex/install.sh | sh，然后新开终端" \
+    "（备选，非官方）转接 Codex 扩展自带的那份，见 docs/setup-vscode.md 第 3 步"
 fi
 if [ "$CODEX_OK" = 1 ]; then
   if run codex login status >/dev/null 2>&1; then
     ok codex-login "Codex 已登录"
   else
     bad codex-login "Codex 未登录" \
-      "运行 codex login，选 Sign in with ChatGPT；需要 Plus 及以上，Free/Go 用不了 CLI"
+      "在 VS Code 的 Codex 面板点 Sign in with ChatGPT（或终端运行 codex login），两边共用同一份登录；需要 Plus 及以上，Free/Go 用不了扩展和命令行"
   fi
 else
   bad codex-login "无法检查登录状态：先修 codex-cli" "先修上一项 codex-cli"

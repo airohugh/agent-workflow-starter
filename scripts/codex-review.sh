@@ -48,6 +48,7 @@ LIMIT=${3:-2400}
 if ! command -v codex >/dev/null 2>&1; then
   echo "PATH 里找不到 codex。官方安装命令：" >&2
   echo "  curl -fsSL https://chatgpt.com/codex/install.sh | sh" >&2
+  echo "不想另装，可以转接 Codex VS Code 扩展自带的那份（非官方做法），见本仓库 docs/setup-vscode.md 第 3 步" >&2
   exit 2
 fi
 

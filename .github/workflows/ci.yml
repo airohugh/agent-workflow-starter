@@ -63,10 +63,11 @@ jobs:
           export HOME="$(mktemp -d)"
           export STARTER_SKIP_EXTENSIONS=1
           ./install.sh
-          ./check.sh > check.out 2>&1 || true
-          cat check.out
+          out="$HOME/check.out"
+          ./check.sh > "$out" 2>&1 || true
+          cat "$out"
           for id in rules-claude rules-codex review-script hooks-files; do
-            grep -qF "✅ [$id]" check.out || { echo "缺少 ✅ [$id]"; exit 1; }
+            grep -qF "✅ [$id]" "$out" || { echo "缺少 ✅ [$id]"; exit 1; }
           done
-          grep -qF "❌ [claude-login]" check.out || grep -qF "❌ [claude-cli]" check.out \
+          grep -qF "❌ [claude-login]" "$out" || grep -qF "❌ [claude-cli]" "$out" \
             || { echo "CI 机器没登录，应出现 ❌ claude-login 或 claude-cli"; exit 1; }
